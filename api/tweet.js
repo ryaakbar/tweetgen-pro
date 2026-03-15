@@ -2,11 +2,33 @@ export const config = {
   api: { bodyParser: { sizeLimit: '5mb' } }
 };
 
-// Daftar API endpoint dengan fallback
-const API_ENDPOINTS = [
-  (p) => `https://api.siputzx.my.id/api/m/tweet?profile=${p.profile}&name=${p.name}&username=${p.username}&tweet=${p.tweet}&image=null&theme=dark&retweets=${p.retweets}&quotes=400&likes=${p.likes}&client=Twitter%20for%20iPhone`,
-  (p) => `https://api.nyxs.pw/tools/fake-tweet?avatar=${p.profile}&name=${p.name}&username=${p.username}&tweet=${p.tweet}&retweet=${p.retweets}&like=${p.likes}`,
-  (p) => `https://bk9.fun/maker/tweet?avatar=${p.profile}&name=${p.name}&username=${p.username}&text=${p.tweet}&retweet=${p.retweets}&like=${p.likes}`,
+// ── API ENDPOINTS (dicoba berurutan) ──────────────────────────────────────────
+const ENDPOINTS = [
+  // 1. siputzx
+  (p) => ({
+    url: `https://api.siputzx.my.id/api/m/tweet?profile=${p.profile}&name=${p.name}&username=${p.username}&tweet=${p.tweet}&image=null&theme=dark&retweets=${p.retweets}&quotes=400&likes=${p.likes}&client=Twitter%20for%20iPhone`,
+    method: 'GET',
+  }),
+  // 2. ryzendesu
+  (p) => ({
+    url: `https://api.ryzendesu.vip/api/maker/tweet?text=${p.tweet}&username=${p.username}&name=${p.name}&avatar=${p.profile}`,
+    method: 'GET',
+  }),
+  // 3. betabotz
+  (p) => ({
+    url: `https://api.betabotz.eu.org/api/tools/faketweet?text=${p.tweet}&username=${p.username}&name=${p.name}&avatar=${p.profile}&apikey=beta`,
+    method: 'GET',
+  }),
+  // 4. agatz
+  (p) => ({
+    url: `https://api.agatz.xyz/api/faketweet?text=${p.tweet}&username=${p.username}&name=${p.name}&avatar=${p.profile}`,
+    method: 'GET',
+  }),
+  // 5. nyxs
+  (p) => ({
+    url: `https://api.nyxs.pw/tools/fake-tweet?avatar=${p.profile}&name=${p.name}&username=${p.username}&tweet=${p.tweet}&retweet=${p.retweets}&like=${p.likes}`,
+    method: 'GET',
+  }),
 ];
 
 export default async function handler(req, res) {
@@ -24,139 +46,117 @@ export default async function handler(req, res) {
     }
 
     // Resolve profile URL
-    // Priority: base64 upload → URL input → default
-    let finalProfileUrl = 'https://files.catbox.moe/f7g0nx.jpg';
-
+    let finalProfileUrl = 'https://i.pravatar.cc/150?img=32';
     if (profileBase64) {
-      // Upload base64 ke catbox.moe sebagai hosting sementara
-      try {
-        finalProfileUrl = await uploadToCatbox(profileBase64);
-      } catch (e) {
-        console.warn('[profile] catbox upload failed, using URL fallback:', e.message);
-        finalProfileUrl = profile || 'https://files.catbox.moe/f7g0nx.jpg';
-      }
-    } else if (profile && profile.trim()) {
+      try { finalProfileUrl = await uploadToCatbox(profileBase64); }
+      catch (e) { finalProfileUrl = profile || finalProfileUrl; }
+    } else if (profile?.trim()) {
       finalProfileUrl = profile.trim();
     }
 
     const params = {
-      profile: encodeURIComponent(finalProfileUrl),
-      name: encodeURIComponent(name),
+      profile:  encodeURIComponent(finalProfileUrl),
+      name:     encodeURIComponent(name),
       username: encodeURIComponent(username.replace(/^@/, '')),
-      tweet: encodeURIComponent(tweet),
+      tweet:    encodeURIComponent(tweet),
       retweets: retweets || 0,
-      likes: likes || 0,
+      likes:    likes || 0,
     };
 
-    // Coba semua endpoint, pakai yang pertama berhasil
+    // Coba semua endpoint
     let lastError = null;
-    for (let i = 0; i < API_ENDPOINTS.length; i++) {
+    for (let i = 0; i < ENDPOINTS.length; i++) {
       try {
-        const apiUrl = API_ENDPOINTS[i](params);
-        console.log(`[tweet] trying endpoint ${i + 1}: ${apiUrl.split('?')[0]}`);
+        const { url, method } = ENDPOINTS[i](params);
+        console.log(`[tweet] trying endpoint ${i + 1}: ${url.split('?')[0]}`);
 
-        const response = await fetch(apiUrl, {
+        const response = await fetch(url, {
+          method,
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36',
-            'Accept': 'image/png, image/*, */*',
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36',
+            'Accept': 'image/png,image/jpeg,image/*,*/*',
           },
-          signal: AbortSignal.timeout(15000),
+          signal: AbortSignal.timeout(12000),
         });
 
         if (!response.ok) {
-          lastError = `Endpoint ${i + 1}: HTTP ${response.status}`;
+          lastError = `Endpoint ${i + 1} (${url.split('/')[2]}): HTTP ${response.status}`;
           continue;
         }
 
         const contentType = response.headers.get('content-type') || '';
-        if (!contentType.includes('image') && !contentType.includes('octet-stream')) {
-          // Coba baca sebagai JSON kalau bukan image
+
+        // Response langsung image
+        if (contentType.includes('image') || contentType.includes('octet-stream')) {
+          const buffer = Buffer.from(await response.arrayBuffer());
+          if (buffer.length < 500) { lastError = `Endpoint ${i + 1}: response terlalu kecil`; continue; }
+          res.setHeader('Content-Type', 'image/png');
+          res.setHeader('Content-Disposition', 'inline; filename="tweet.png"');
+          return res.status(200).send(buffer);
+        }
+
+        // Response JSON yang mengandung URL image
+        if (contentType.includes('json') || contentType.includes('text')) {
           const text = await response.text();
+          let imgUrl = null;
           try {
             const json = JSON.parse(text);
-            // Beberapa API return {status, result} dengan URL image
-            const imgUrl = json?.result || json?.data?.url || json?.url || json?.image;
-            if (imgUrl) {
-              const imgRes = await fetch(imgUrl, { signal: AbortSignal.timeout(10000) });
-              if (imgRes.ok) {
-                const buf = Buffer.from(await imgRes.arrayBuffer());
+            imgUrl = json?.result || json?.data?.url || json?.url || json?.image
+                  || json?.data?.image || json?.data?.result || json?.output;
+          } catch {}
+
+          if (imgUrl && typeof imgUrl === 'string' && imgUrl.startsWith('http')) {
+            const imgRes = await fetch(imgUrl, { signal: AbortSignal.timeout(10000) });
+            if (imgRes.ok) {
+              const buf = Buffer.from(await imgRes.arrayBuffer());
+              if (buf.length > 500) {
                 res.setHeader('Content-Type', 'image/png');
                 res.setHeader('Content-Disposition', 'inline; filename="tweet.png"');
                 return res.status(200).send(buf);
               }
             }
-          } catch {}
-          lastError = `Endpoint ${i + 1}: bukan image (${contentType})`;
+          }
+          lastError = `Endpoint ${i + 1}: tidak ada image di response`;
           continue;
         }
 
-        const buffer = Buffer.from(await response.arrayBuffer());
-        if (buffer.length < 1000) {
-          lastError = `Endpoint ${i + 1}: response terlalu kecil (${buffer.length} bytes)`;
-          continue;
-        }
-
-        res.setHeader('Content-Type', 'image/png');
-        res.setHeader('Content-Disposition', 'inline; filename="tweet.png"');
-        return res.status(200).send(buffer);
-
+        lastError = `Endpoint ${i + 1}: content-type tidak dikenal (${contentType})`;
       } catch (err) {
         lastError = `Endpoint ${i + 1}: ${err.message}`;
         console.warn(`[tweet] endpoint ${i + 1} failed:`, err.message);
-        continue;
       }
     }
 
-    // Semua endpoint gagal
+    // Semua gagal — return error jelas
     return res.status(503).json({
-      error: 'Semua API sedang tidak tersedia. Coba lagi dalam beberapa menit.',
+      error: 'Semua API sedang tidak tersedia. Coba lagi nanti.',
       details: lastError,
     });
 
   } catch (error) {
-    return res.status(500).json({
-      error: 'Server error',
-      details: error.message,
-    });
+    return res.status(500).json({ error: 'Server error', details: error.message });
   }
 }
 
-// Upload base64 image ke catbox.moe (free image hosting)
+// Upload base64 ke catbox.moe
 async function uploadToCatbox(base64Data) {
-  // base64Data bisa berupa "data:image/jpeg;base64,..." atau raw base64
   const raw = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
   const mimeMatch = base64Data.match(/data:([^;]+);/);
   const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
   const ext = mime.split('/')[1] || 'jpg';
-
   const buffer = Buffer.from(raw, 'base64');
-
-  // Buat FormData manual untuk catbox
-  const boundary = '----FormBoundary' + Math.random().toString(36).slice(2);
-  const filename = `profile_${Date.now()}.${ext}`;
-
-  const parts = [
-    `--${boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload`,
-    `--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="${filename}"\r\nContent-Type: ${mime}\r\n\r\n`,
-  ];
-
-  const header = Buffer.from(parts.join('\r\n'));
+  const boundary = '----FB' + Math.random().toString(36).slice(2);
+  const filename = `pfp_${Date.now()}.${ext}`;
+  const header = Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="${filename}"\r\nContent-Type: ${mime}\r\n\r\n`);
   const footer = Buffer.from(`\r\n--${boundary}--`);
   const body = Buffer.concat([header, buffer, footer]);
-
   const response = await fetch('https://catbox.moe/user/api.php', {
     method: 'POST',
-    headers: {
-      'Content-Type': `multipart/form-data; boundary=${boundary}`,
-      'Content-Length': body.length,
-    },
+    headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
     body,
     signal: AbortSignal.timeout(20000),
   });
-
   const text = await response.text();
-  if (!text.startsWith('https://')) {
-    throw new Error('Catbox upload failed: ' + text);
-  }
+  if (!text.startsWith('https://')) throw new Error('Catbox: ' + text);
   return text.trim();
 }
