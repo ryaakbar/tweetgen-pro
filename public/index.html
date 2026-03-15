@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tweet Generator Pro — by ryaakbar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<!-- MARQUEE -->
+<div class="marquee-top">
+    <div class="marquee-content">
+        TWEET GENERATOR PRO <span class="marquee-dot">◆</span>
+        FAKE TWEET MAKER <span class="marquee-dot">◆</span>
+        DARK THEME <span class="marquee-dot">◆</span>
+        POWERED BY RYAAKBAR <span class="marquee-dot">◆</span>
+        FREE NO WATERMARK <span class="marquee-dot">◆</span>
+        INSTANT DOWNLOAD <span class="marquee-dot">◆</span>
+        TWEET GENERATOR PRO <span class="marquee-dot">◆</span>
+        FAKE TWEET MAKER <span class="marquee-dot">◆</span>
+        DARK THEME <span class="marquee-dot">◆</span>
+        POWERED BY RYAAKBAR <span class="marquee-dot">◆</span>
+        FREE NO WATERMARK <span class="marquee-dot">◆</span>
+        INSTANT DOWNLOAD <span class="marquee-dot">◆</span>
+    </div>
+</div>
+
+<!-- NAVBAR -->
+<nav class="navbar" id="navbar">
+    <div class="brand-container">
+        <div class="brand-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.26 5.632zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+        </div>
+        <div class="brand-glitch">Tweet<span>Gen</span></div>
+    </div>
+    <div class="nav-right">
+        <div class="status-pill">
+            <div class="dot-live"></div>
+            ONLINE
+        </div>
+    </div>
+</nav>
+
+<!-- MAIN -->
+<div class="container">
+
+    <!-- HERO -->
+    <div class="hero-header reveal">
+        <div class="hero-badge">🐦 Tweet Generator Pro — Free</div>
+        <h1 class="hero-title">Bikin Tweet <span class="grad-text">Viral,</span><br>Sekarang.</h1>
+        <p class="hero-sub">Generate fake tweet screenshot kualitas tinggi. Dark theme, no watermark, instant download.</p>
+    </div>
+
+    <!-- FORM CARD -->
+    <div class="glass-card reveal delay-1" id="formCard">
+        <div class="card-header">
+            <div class="card-header-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.26 5.632zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+            </div>
+            <div>
+                <div class="header-label">🎨 Tweet Customizer</div>
+                <div class="header-title">Isi data tweet kamu di bawah</div>
+            </div>
+        </div>
+
+        <div class="card-body">
+
+            <!-- PROFILE URL + PREVIEW -->
+            <div class="input-group">
+                <label class="input-label">
+                    <i class="fa-solid fa-user-circle" style="margin-right:5px;color:var(--blue-400)"></i>
+                    Profile Picture URL
+                </label>
+                <div class="profile-row">
+                    <div class="profile-preview-wrap">
+                        <img src="https://files.catbox.moe/f7g0nx.jpg" alt="Preview" class="profile-preview-img" id="profilePreview">
+                    </div>
+                    <div class="profile-input-wrap">
+                        <div class="input-wrapper">
+                            <span class="input-icon">
+                                <i class="fa-solid fa-link" style="font-size:13px"></i>
+                            </span>
+                            <input type="text" id="profileInput" class="cyber-input"
+                                placeholder="https://i.pravatar.cc/150?img=5 (kosongkan = default)"
+                                oninput="previewProfile(this.value)"
+                                autocomplete="off">
+                        </div>
+                        <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-muted);margin-top:5px">
+                            💡 Kosongkan untuk pakai foto default
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NAME & USERNAME -->
+            <div class="input-grid">
+                <div class="input-group" style="margin-bottom:0">
+                    <label class="input-label">
+                        <i class="fa-solid fa-id-badge" style="margin-right:5px;color:var(--blue-400)"></i>
+                        Display Name
+                    </label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">
+                            <i class="fa-solid fa-user" style="font-size:13px"></i>
+                        </span>
+                        <input type="text" id="nameInput" class="cyber-input"
+                            placeholder="Elon Musk"
+                            autocomplete="off">
+                    </div>
+                </div>
+                <div class="input-group" style="margin-bottom:0">
+                    <label class="input-label">
+                        <i class="fa-solid fa-at" style="margin-right:5px;color:var(--blue-400)"></i>
+                        Username
+                    </label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">
+                            <i class="fa-solid fa-at" style="font-size:13px"></i>
+                        </span>
+                        <input type="text" id="usernameInput" class="cyber-input"
+                            placeholder="elonmusk"
+                            autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom:16px"></div>
+
+            <!-- TWEET TEXT -->
+            <div class="input-group">
+                <label class="input-label">
+                    <i class="fa-solid fa-pen-nib" style="margin-right:5px;color:var(--blue-400)"></i>
+                    Tweet Content
+                </label>
+                <div class="textarea-icon-wrap">
+                    <span class="input-icon" style="top:14px;position:absolute;left:14px;z-index:1">
+                        <i class="fa-solid fa-message" style="font-size:13px"></i>
+                    </span>
+                    <textarea id="tweetInput" class="tweet-textarea"
+                        placeholder="Tulis isi tweet di sini... maksimal 280 karakter"
+                        oninput="updateCharCount(this)" maxlength="280"></textarea>
+                </div>
+                <div class="tweet-char-count" id="charCount">0 / 280</div>
+            </div>
+
+            <div class="form-divider">
+                <span class="form-divider-label">Engagement Stats (Opsional)</span>
+            </div>
+
+            <!-- RETWEETS & LIKES -->
+            <div class="input-grid">
+                <div class="input-group" style="margin-bottom:0">
+                    <label class="input-label">
+                        <i class="fa-solid fa-retweet" style="margin-right:5px;color:var(--blue-400)"></i>
+                        Retweets
+                    </label>
+                    <div class="num-input-wrap">
+                        <span class="input-icon">
+                            <i class="fa-solid fa-retweet" style="font-size:12px"></i>
+                        </span>
+                        <input type="number" id="retweetsInput" class="num-input"
+                            placeholder="1200" min="0" value="0">
+                    </div>
+                </div>
+                <div class="input-group" style="margin-bottom:0">
+                    <label class="input-label">
+                        <i class="fa-solid fa-heart" style="margin-right:5px;color:var(--blue-400)"></i>
+                        Likes
+                    </label>
+                    <div class="num-input-wrap">
+                        <span class="input-icon">
+                            <i class="fa-solid fa-heart" style="font-size:12px"></i>
+                        </span>
+                        <input type="number" id="likesInput" class="num-input"
+                            placeholder="42000" min="0" value="0">
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom:20px"></div>
+
+            <!-- SUBMIT -->
+            <button id="generateBtn" class="cyber-button" onclick="generateTweet()">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Generate Tweet</span>
+                <span class="btn-arrow">→</span>
+            </button>
+
+        </div>
+    </div>
+
+    <!-- LOADING -->
+    <div id="loading" class="glass-card loading-card hidden">
+        <div class="loader-ring"></div>
+        <div class="loader-text">Generating tweet...</div>
+        <div class="loader-progress"><div class="loader-bar"></div></div>
+    </div>
+
+    <!-- ERROR -->
+    <div id="errorCard" class="glass-card error-card hidden">
+        <div class="error-icon">⚠️</div>
+        <div>
+            <div class="error-title">Gagal Generate Tweet</div>
+            <div class="error-body" id="errorText"></div>
+        </div>
+    </div>
+
+    <!-- RESULT -->
+    <div id="resultCard" class="glass-card result-card hidden">
+        <div class="result-header">
+            <div class="result-type">
+                <div class="result-type-icon">🐦</div>
+                Tweet Screenshot
+            </div>
+            <div class="result-badge">
+                <span>●</span> READY
+            </div>
+        </div>
+        <div class="result-body">
+            <div class="tweet-img-wrap">
+                <img id="resultImg" src="" alt="Generated Tweet">
+            </div>
+            <div class="action-row">
+                <button class="btn-action btn-download" onclick="downloadTweet()">
+                    <i class="fa-solid fa-download"></i>
+                    Download PNG
+                </button>
+                <button class="btn-action btn-copy" id="copyBtn" onclick="copyTweetImg()">
+                    <i class="fa-solid fa-copy"></i>
+                    Copy Image
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="sann-footer reveal">
+        <div class="footer-divider"></div>
+        <p class="footer-text">Powered by</p>
+        <p class="footer-brand">RYAAKBAR</p>
+        <p class="footer-sub">Free forever · No watermark · No cap</p>
+    </footer>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- SCROLL BUTTONS -->
+<div class="scroll-btns" id="scrollBtns">
+    <button class="scroll-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Ke atas">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+    </button>
+    <button class="scroll-btn" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})" title="Ke bawah">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
