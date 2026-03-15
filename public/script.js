@@ -204,9 +204,38 @@ async function generateTweet() {
         };
 
     } catch (err) {
-        setLoading(false);
-        showError(err.message);
-        showToast('❌ ' + err.message, 'error');
+        // API gagal semua — coba Canvas fallback
+        console.warn('[tweet] all APIs failed, trying canvas fallback:', err.message);
+        showToast('⚡ API down, pakai mode offline...', '');
+        try {
+            const profileSrc = profileBase64 ||
+                (profileMode === 'url' ? document.getElementById('profileInput').value.trim() : null);
+            const dataUrl = await generateTweetCanvas({
+                name, username, tweet, retweets, likes, profileSrc
+            });
+            setLoading(false);
+            if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+            // Convert dataURL ke blob
+            const byteStr = atob(dataUrl.split(',')[1]);
+            const ab = new ArrayBuffer(byteStr.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteStr.length; i++) ia[i] = byteStr.charCodeAt(i);
+            const blob = new Blob([ab], { type: 'image/png' });
+            currentBlobUrl = URL.createObjectURL(blob);
+            const img = document.getElementById('resultImg');
+            img.src = currentBlobUrl;
+            img.onload = () => {
+                showResult();
+                showToast('✅ Generated (offline mode)!', 'success');
+                setTimeout(() => {
+                    document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 150);
+            };
+        } catch (canvasErr) {
+            setLoading(false);
+            showError('Semua API down dan canvas fallback gagal: ' + err.message);
+            showToast('❌ Gagal total bro, coba lagi nanti', 'error');
+        }
     }
 }
 
@@ -272,4 +301,138 @@ function showToast(msg, type = '') {
     toast.textContent = msg;
     toast.className = 'toast show ' + type;
     toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
+}
+
+// ══════════════════════════════════════════
+// CANVAS FALLBACK — generate tweet lokal
+// dipake kalau semua API eksternal gagal
+// ══════════════════════════════════════════
+async function generateTweetCanvas({ name, username, tweet, retweets, likes, profileSrc }) {
+    const W = 600, PAD = 28;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Hitung tinggi dinamis berdasarkan panjang tweet
+    ctx.font = '18px -apple-system, system-ui, sans-serif';
+    const words = tweet.split(' ');
+    let lines = [], line = '';
+    const maxW = W - PAD * 2 - 72;
+    for (const word of words) {
+        const test = line ? line + ' ' + word : word;
+        if (ctx.measureText(test).width > maxW) { lines.push(line); line = word; }
+        else line = test;
+    }
+    if (line) lines.push(line);
+    const tweetH = lines.length * 26;
+    const H = 180 + tweetH;
+
+    canvas.width = W;
+    canvas.height = H;
+
+    // Background
+    ctx.fillStyle = '#15202b';
+    ctx.fillRect(0, 0, W, H);
+
+    // Avatar circle
+    const avatarSize = 48, avatarX = PAD, avatarY = PAD;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+    ctx.clip();
+
+    if (profileSrc && profileSrc.startsWith('data:')) {
+        await new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => { ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize); resolve(); };
+            img.onerror = () => {
+                ctx.fillStyle = '#1d4ed8'; ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize); resolve();
+            };
+            img.src = profileSrc;
+        });
+    } else if (profileSrc) {
+        await new Promise(resolve => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => { ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize); resolve(); };
+            img.onerror = () => {
+                ctx.fillStyle = '#1d4ed8'; ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize); resolve();
+            };
+            img.src = profileSrc;
+        });
+    } else {
+        ctx.fillStyle = '#1d4ed8'; ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
+    }
+    ctx.restore();
+
+    const textX = avatarX + avatarSize + 14;
+
+    // Name
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 16px -apple-system, system-ui, sans-serif';
+    ctx.fillText(name, textX, avatarY + 18);
+
+    // Verified badge (X blue)
+    ctx.fillStyle = '#1d9bf0';
+    ctx.font = '14px -apple-system, system-ui, sans-serif';
+    ctx.fillText('✓', textX + ctx.measureText(name).width + 5, avatarY + 18);
+
+    // Username
+    ctx.fillStyle = '#8899a6';
+    ctx.font = '14px -apple-system, system-ui, sans-serif';
+    ctx.fillText('@' + username, textX, avatarY + 38);
+
+    // X logo top right
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 20px -apple-system, system-ui, sans-serif';
+    ctx.fillText('𝕏', W - PAD - 20, avatarY + 20);
+
+    // Tweet text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '18px -apple-system, system-ui, sans-serif';
+    let ty = avatarY + avatarSize + 22;
+    for (const l of lines) { ctx.fillText(l, PAD, ty); ty += 26; }
+
+    // Time line
+    ctx.fillStyle = '#8899a6';
+    ctx.font = '13px -apple-system, system-ui, sans-serif';
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) +
+        ' · ' + now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+        ' · Twitter for iPhone';
+    ctx.fillText(timeStr, PAD, ty + 8);
+
+    // Divider
+    ty += 26;
+    ctx.strokeStyle = '#38444d';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD, ty); ctx.lineTo(W - PAD, ty); ctx.stroke();
+    ty += 16;
+
+    // Stats
+    ctx.font = 'bold 15px -apple-system, system-ui, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(formatNum(retweets), PAD, ty + 2);
+    ctx.font = '15px -apple-system, system-ui, sans-serif';
+    ctx.fillStyle = '#8899a6';
+    ctx.fillText(' Retweets', PAD + ctx.measureText(formatNum(retweets)).width, ty + 2);
+
+    const rtW = ctx.measureText(formatNum(retweets) + ' Retweets  ').width + PAD;
+    ctx.font = 'bold 15px -apple-system, system-ui, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(formatNum(likes), rtW, ty + 2);
+    ctx.font = '15px -apple-system, system-ui, sans-serif';
+    ctx.fillStyle = '#8899a6';
+    ctx.fillText(' Likes', rtW + ctx.measureText(formatNum(likes)).width, ty + 2);
+
+    // Divider 2
+    ty += 22;
+    ctx.beginPath(); ctx.moveTo(PAD, ty); ctx.lineTo(W - PAD, ty); ctx.stroke();
+
+    return canvas.toDataURL('image/png');
+}
+
+function formatNum(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return String(n);
 }
