@@ -1,55 +1,129 @@
 // ============================================
-// TWEET GENERATOR PRO — SCRIPT
+// TWEET GENERATOR PRO — SCRIPT v2
 // by ryaakbar
 // ============================================
 
 let currentBlobUrl = null;
 let toastTimer = null;
+let profileBase64 = null;   // base64 dari file upload
+let profileMode = 'url';    // 'url' | 'upload'
 
 // ── INIT ──────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-    // Reveal on scroll
     const observer = new IntersectionObserver((entries) => {
-        entries.forEach(el => {
-            if (el.isIntersecting) el.target.classList.add('visible');
-        });
+        entries.forEach(el => { if (el.isIntersecting) el.target.classList.add('visible'); });
     }, { threshold: 0.12 });
     document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-    // Navbar scroll effect
     const navbar = document.getElementById('navbar');
     const scrollBtns = document.getElementById('scrollBtns');
     window.addEventListener('scroll', () => {
-        if (window.scrollY > 20) {
-            navbar?.classList.add('scrolled');
-            scrollBtns?.classList.add('visible');
-        } else {
-            navbar?.classList.remove('scrolled');
-            scrollBtns?.classList.remove('visible');
-        }
+        const scrolled = window.scrollY > 20;
+        navbar?.classList.toggle('scrolled', scrolled);
+        scrollBtns?.classList.toggle('visible', scrolled);
     });
 
-    // Enter key support
     document.querySelectorAll('.cyber-input, .num-input').forEach(input => {
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') generateTweet();
-        });
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') generateTweet(); });
     });
 });
 
-// ── PROFILE PREVIEW ───────────────────────
-function previewProfile(url) {
+// ── PROFILE TAB SWITCH ────────────────────
+function switchProfileTab(mode) {
+    profileMode = mode;
+    document.getElementById('tabUrl').classList.toggle('active', mode === 'url');
+    document.getElementById('tabUpload').classList.toggle('active', mode === 'upload');
+    document.getElementById('profileUrlMode').style.display = mode === 'url' ? 'block' : 'none';
+    document.getElementById('profileUploadMode').style.display = mode === 'upload' ? 'block' : 'none';
+
+    if (mode === 'url') {
+        profileBase64 = null;
+        const url = document.getElementById('profileInput').value.trim();
+        previewProfile(url);
+        setProfileBadge(false);
+    } else {
+        // Reset ke default saat switch ke upload kalau belum ada file
+        if (!profileBase64) showAvatarDefault();
+    }
+}
+
+// ── PROFILE URL PREVIEW ───────────────────
+function showAvatarImage(src) {
     const img = document.getElementById('profilePreview');
-    if (!url.trim()) {
-        img.src = 'https://files.catbox.moe/f7g0nx.jpg';
+    const svg = document.getElementById('profileAvatarSvg');
+    img.src = src;
+    img.style.display = 'block';
+    if (svg) svg.style.display = 'none';
+}
+function showAvatarDefault() {
+    const img = document.getElementById('profilePreview');
+    const svg = document.getElementById('profileAvatarSvg');
+    img.style.display = 'none';
+    img.src = '';
+    if (svg) svg.style.display = 'block';
+}
+
+function previewProfile(url) {
+    if (!url.trim()) { showAvatarDefault(); return; }
+    const testImg = new Image();
+    testImg.onload = () => showAvatarImage(url);
+    testImg.onerror = () => showAvatarDefault();
+    testImg.src = url;
+}
+
+// ── FILE UPLOAD HANDLER ───────────────────
+function handleFileUpload(input) {
+    const file = input.files?.[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+        showToast('⚠️ Foto terlalu besar! Maks 3MB ya bro', 'error');
         return;
     }
-    const testImg = new Image();
-    testImg.onload = () => { img.src = url; };
-    testImg.onerror = () => {
-        img.src = 'https://files.catbox.moe/f7g0nx.jpg';
+    if (!file.type.startsWith('image/')) {
+        showToast('⚠️ Harus file gambar bro!', 'error');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        profileBase64 = e.target.result;
+        // Preview langsung
+        showAvatarImage(profileBase64);
+        setProfileBadge(true);
+        // Update drop area UI
+        const dropArea = document.getElementById('dropArea');
+        const dropContent = document.getElementById('dropContent');
+        dropArea.classList.add('has-file');
+        dropContent.innerHTML = `
+            <i class="fa-solid fa-circle-check" style="font-size:1.3rem;color:#10b981;margin-bottom:5px"></i>
+            <div style="font-size:0.82rem;color:#34d399;font-weight:600">${file.name}</div>
+            <div style="font-family:var(--font-mono);font-size:0.63rem;color:var(--text-muted);margin-top:3px">
+                Klik untuk ganti foto
+            </div>`;
+        showToast('✅ Foto berhasil dipilih!', 'success');
     };
-    testImg.src = url;
+    reader.readAsDataURL(file);
+}
+
+// ── DRAG & DROP ───────────────────────────
+function handleDragOver(e) {
+    e.preventDefault();
+    document.getElementById('dropArea').classList.add('dragover');
+}
+function handleDragLeave(e) {
+    document.getElementById('dropArea').classList.remove('dragover');
+}
+function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('dropArea').classList.remove('dragover');
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+        const fakeInput = { files: [file] };
+        handleFileUpload(fakeInput);
+    }
+}
+
+function setProfileBadge(show) {
+    document.getElementById('profileBadge').style.display = show ? 'grid' : 'none';
 }
 
 // ── CHAR COUNT ────────────────────────────
@@ -71,47 +145,50 @@ async function generateTweet() {
     const retweets  = parseInt(document.getElementById('retweetsInput').value) || 0;
     const likes     = parseInt(document.getElementById('likesInput').value) || 0;
 
-    // Validasi
     if (!name) { showToast('⚠️ Display name wajib diisi!', 'error'); focusInput('nameInput'); return; }
     if (!username) { showToast('⚠️ Username wajib diisi!', 'error'); focusInput('usernameInput'); return; }
     if (!tweet) { showToast('⚠️ Isi tweet wajib diisi!', 'error'); focusInput('tweetInput'); return; }
 
-    // Clean username — hapus @ kalau ada
-    const cleanUsername = username.replace(/^@/, '');
+    // Validasi mode upload
+    if (profileMode === 'upload' && !profileBase64) {
+        showToast('⚠️ Pilih foto profil dulu bro!', 'error');
+        return;
+    }
 
-    // UI: loading state
     setLoading(true);
     hideResult();
     hideError();
+
+    const payload = {
+        name,
+        username,
+        tweet,
+        retweets,
+        likes,
+    };
+
+    // Kirim sesuai mode
+    if (profileMode === 'upload' && profileBase64) {
+        payload.profileBase64 = profileBase64;
+    } else {
+        payload.profile = profile;
+    }
 
     try {
         const res = await fetch('/api/tweet', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                profile,
-                name,
-                username: cleanUsername,
-                tweet,
-                retweets,
-                likes
-            })
+            body: JSON.stringify(payload)
         });
 
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({ error: 'Unknown error' }));
-            throw new Error(errData.error || `HTTP ${res.status}`);
-        }
-
         const contentType = res.headers.get('Content-Type') || '';
-        if (!contentType.includes('image')) {
-            const errData = await res.json().catch(() => ({ error: 'Response bukan image' }));
-            throw new Error(errData.error || 'API tidak mengembalikan image');
+
+        if (!res.ok || !contentType.includes('image')) {
+            const errData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+            throw new Error(errData.error || errData.details || `Gagal: HTTP ${res.status}`);
         }
 
-        // Revoke old blob URL
         if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
-
         const blob = await res.blob();
         currentBlobUrl = URL.createObjectURL(blob);
 
@@ -120,8 +197,7 @@ async function generateTweet() {
         img.onload = () => {
             setLoading(false);
             showResult();
-            showToast('✅ Tweet berhasil digenerate!', 'success');
-            // Smooth scroll ke result
+            showToast('🔥 Tweet berhasil digenerate!', 'success');
             setTimeout(() => {
                 document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 150);
@@ -130,7 +206,7 @@ async function generateTweet() {
     } catch (err) {
         setLoading(false);
         showError(err.message);
-        showToast('❌ Gagal generate tweet', 'error');
+        showToast('❌ ' + err.message, 'error');
     }
 }
 
@@ -138,10 +214,10 @@ async function generateTweet() {
 function downloadTweet() {
     if (!currentBlobUrl) return;
     const name = document.getElementById('nameInput').value.trim() || 'tweet';
-    const safeName = name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    const safe = name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
     const a = document.createElement('a');
     a.href = currentBlobUrl;
-    a.download = `tweet_${safeName}_${Date.now()}.png`;
+    a.download = `tweet_${safe}_${Date.now()}.png`;
     a.click();
     showToast('⬇️ Downloading...', 'success');
 }
@@ -150,60 +226,39 @@ function downloadTweet() {
 async function copyTweetImg() {
     if (!currentBlobUrl) return;
     const copyBtn = document.getElementById('copyBtn');
-
     try {
         const res = await fetch(currentBlobUrl);
         const blob = await res.blob();
-        await navigator.clipboard.write([
-            new ClipboardItem({ [blob.type]: blob })
-        ]);
+        await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
         copyBtn.classList.add('copied');
         copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
-        showToast('📋 Image copied to clipboard!', 'success');
+        showToast('📋 Image copied!', 'success');
         setTimeout(() => {
             copyBtn.classList.remove('copied');
             copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> Copy Image';
         }, 2500);
     } catch {
-        // Fallback: open in new tab
         window.open(currentBlobUrl, '_blank');
-        showToast('💡 Dibuka di tab baru, save manual ya!', 'success');
+        showToast('💡 Dibuka di tab baru, save manual!', 'success');
     }
 }
 
 // ── UI HELPERS ────────────────────────────
 function setLoading(show) {
     const btn = document.getElementById('generateBtn');
-    const loading = document.getElementById('loading');
-
-    if (show) {
-        loading.classList.remove('hidden');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Generating...</span>';
-    } else {
-        loading.classList.add('hidden');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i><span>Generate Tweet</span><span class="btn-arrow">→</span>';
-    }
+    document.getElementById('loading').classList.toggle('hidden', !show);
+    btn.disabled = show;
+    btn.innerHTML = show
+        ? '<i class="fa-solid fa-spinner fa-spin"></i><span>Generating...</span>'
+        : '<i class="fa-solid fa-wand-magic-sparkles"></i><span>Generate Tweet</span><span class="btn-arrow">→</span>';
 }
-
-function showResult() {
-    document.getElementById('resultCard').classList.remove('hidden');
-}
-
-function hideResult() {
-    document.getElementById('resultCard').classList.add('hidden');
-}
-
+function showResult() { document.getElementById('resultCard').classList.remove('hidden'); }
+function hideResult() { document.getElementById('resultCard').classList.add('hidden'); }
 function showError(msg) {
     document.getElementById('errorText').textContent = msg;
     document.getElementById('errorCard').classList.remove('hidden');
 }
-
-function hideError() {
-    document.getElementById('errorCard').classList.add('hidden');
-}
-
+function hideError() { document.getElementById('errorCard').classList.add('hidden'); }
 function focusInput(id) {
     const el = document.getElementById(id);
     el?.focus();
@@ -216,7 +271,5 @@ function showToast(msg, type = '') {
     const toast = document.getElementById('toast');
     toast.textContent = msg;
     toast.className = 'toast show ' + type;
-    toastTimer = setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
 }

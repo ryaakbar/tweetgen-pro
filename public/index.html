@@ -78,29 +78,77 @@
 
         <div class="card-body">
 
-            <!-- PROFILE URL + PREVIEW -->
+            <!-- PROFILE PICTURE — URL atau UPLOAD -->
             <div class="input-group">
                 <label class="input-label">
                     <i class="fa-solid fa-user-circle" style="margin-right:5px;color:var(--blue-400)"></i>
-                    Profile Picture URL
+                    Profile Picture
                 </label>
+
+                <!-- Toggle tabs -->
+                <div class="profile-tabs">
+                    <button class="profile-tab active" id="tabUrl" onclick="switchProfileTab('url')">
+                        <i class="fa-solid fa-link"></i> URL
+                    </button>
+                    <button class="profile-tab" id="tabUpload" onclick="switchProfileTab('upload')">
+                        <i class="fa-solid fa-upload"></i> Upload
+                    </button>
+                </div>
+
                 <div class="profile-row">
                     <div class="profile-preview-wrap">
-                        <img src="https://files.catbox.moe/f7g0nx.jpg" alt="Preview" class="profile-preview-img" id="profilePreview">
+                        <div class="profile-avatar-shell" id="profileAvatarShell">
+                            <!-- SVG default avatar -->
+                            <svg id="profileAvatarSvg" width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="32" cy="32" r="32" fill="url(#avatarGrad)"/>
+                                <circle cx="32" cy="26" r="11" fill="rgba(255,255,255,0.35)"/>
+                                <ellipse cx="32" cy="54" rx="18" ry="13" fill="rgba(255,255,255,0.35)"/>
+                                <defs>
+                                    <linearGradient id="avatarGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+                                        <stop offset="0%" stop-color="#1e40af"/>
+                                        <stop offset="100%" stop-color="#0ea5e9"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <img src="" alt="Preview" class="profile-preview-img" id="profilePreview" style="display:none">
+                        </div>
+                        <div class="profile-preview-badge" id="profileBadge" style="display:none">✓</div>
                     </div>
                     <div class="profile-input-wrap">
-                        <div class="input-wrapper">
-                            <span class="input-icon">
-                                <i class="fa-solid fa-link" style="font-size:13px"></i>
-                            </span>
-                            <input type="text" id="profileInput" class="cyber-input"
-                                placeholder="https://i.pravatar.cc/150?img=5 (kosongkan = default)"
-                                oninput="previewProfile(this.value)"
-                                autocomplete="off">
+
+                        <!-- URL MODE -->
+                        <div id="profileUrlMode">
+                            <div class="input-wrapper">
+                                <span class="input-icon">
+                                    <i class="fa-solid fa-link" style="font-size:13px"></i>
+                                </span>
+                                <input type="text" id="profileInput" class="cyber-input"
+                                    placeholder="https://i.pravatar.cc/150?img=5"
+                                    oninput="previewProfile(this.value)"
+                                    autocomplete="off">
+                            </div>
+                            <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-muted);margin-top:5px">
+                                💡 Kosongkan untuk pakai foto default
+                            </div>
                         </div>
-                        <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-muted);margin-top:5px">
-                            💡 Kosongkan untuk pakai foto default
+
+                        <!-- UPLOAD MODE -->
+                        <div id="profileUploadMode" style="display:none">
+                            <div class="upload-drop-area" id="dropArea"
+                                onclick="document.getElementById('profileFileInput').click()"
+                                ondragover="handleDragOver(event)"
+                                ondragleave="handleDragLeave(event)"
+                                ondrop="handleDrop(event)">
+                                <input type="file" id="profileFileInput" accept="image/*"
+                                    style="display:none" onchange="handleFileUpload(this)">
+                                <div class="drop-content" id="dropContent">
+                                    <i class="fa-solid fa-cloud-arrow-up" style="font-size:1.4rem;color:var(--blue-400);margin-bottom:6px"></i>
+                                    <div style="font-size:0.82rem;color:var(--text-secondary);font-weight:600">Klik atau drag foto ke sini</div>
+                                    <div style="font-family:var(--font-mono);font-size:0.63rem;color:var(--text-muted);margin-top:3px">JPG, PNG, WEBP — maks 3MB</div>
+                                </div>
+                            </div>
                         </div>
+
                     </div>
                 </div>
             </div>
